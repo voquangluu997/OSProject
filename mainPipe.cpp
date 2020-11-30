@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <iostream>
-// #include "fileHandle.h"
 #include "stack.h"
 #include "queue.h"
 
@@ -12,14 +11,11 @@ double balanAlth(char *expression);
 int getLength(char *);
 void enterExpression(int *pipe1, int *pipe2);
 void getExpressionsFromFile();
-char *doubleToString(double x, char *y);
+char *doubleToString(double x);
 bool isOperation(char c);
 
 int main()
 {
-   char xx[100];
-   doubleToString(-23, xx);
-   cout << "amen " << xx;
    Stack st;
    Queue q;
    int pipefds1[2], pipefds2[2];
@@ -61,12 +57,10 @@ int main()
       switch (option)
       {
       case 1:
-         // char c[100];
-         // enterExpression(pipefds1, pipefds2);
-         // char c[100];
          int returnStatus;
          cout << "In parent : nhap bieu thuc : ";
          cin >> pipe1writeExpression;
+         cin.ignore();
          cout << "In Parent: Writing to pipe 1 - ms is " << pipe1writeExpression << endl;
          write(pipefds1[1], pipe1writeExpression, sizeof(pipe1writeExpression));
          read(pipefds2[0], readMessage, sizeof(readMessage));
@@ -81,21 +75,18 @@ int main()
    {
       close(pipefds1[1]); // Close pipe1 write side
       close(pipefds2[0]); // Close pipe2 read side
-      char c[100];
-      // int returnStatus;
-      // int i = 0;
+      char *c = new char[100];
       read(pipefds1[0], readMessage, sizeof(readMessage));
       cout << "In Child: Reading from pipe 1 : bieu thuc doc duoc tu Parent process  la : " << readMessage << endl;
       double rs = balanAlth(readMessage);
       cout << " kq theo balan la : " << rs << endl;
-      doubleToString(rs, c);
+      c = doubleToString(rs);
       cout << "kq convert thanh chuoi la : " << c << endl;
       cout << "In Child: Writing to pipe 2 – Message is " << c << endl;
       write(pipefds2[1], c, sizeof(c));
    }
    return 0;
 }
-
 void menu()
 {
    printf("NHAP LUA CHON: \n");
@@ -122,22 +113,16 @@ bool isDigit(char c)
 double getNumber(char *str, int &i)
 {
    int in = 0;
-   int decimal = 0;
+   double decimal = 0;
    bool isDecimal = false;
    int lenOfDecimal = 0;
-   double result;
    char c = str[i];
    while ((c >= '0' && c <= '9') || c == '.')
    {
       if (c != '.' && !isDecimal)
-      {
          in = in * 10 + (c - '0');
-      }
       if (c == '.')
-      {
-
          isDecimal = true;
-      }
       if (c != '.' && isDecimal)
       {
          decimal = decimal * 10 + (c - '0');
@@ -146,20 +131,11 @@ double getNumber(char *str, int &i)
       i++;
       c = str[i];
    };
-   int temp = lenOfDecimal;
-   while (temp > 0)
-   {
-      in = in * 10 + decimal;
-      temp--;
-      result = in;
-   }
-   while (lenOfDecimal > 0)
-   {
-      result = result / 10;
-      lenOfDecimal--;
-   }
-   result = isDecimal ? result : in;
-   return result;
+   if (!isDecimal)
+      return in;
+   for (int i = 0; i < lenOfDecimal; i++)
+      decimal /= 10;
+   return (double)(in + decimal);
 }
 
 bool isOperation(char c)
@@ -182,7 +158,7 @@ double calFromOperation(double nd1, double nd2, char op)
    case '/':
       if (nd2 == 0)
          return -9999;
-      return nd1 / nd2;
+      return (double)((int)((nd1 / nd2) * 100)) / 100;
    }
    return 0;
 }
@@ -192,11 +168,8 @@ double calculator(Stack st, Queue q)
    double p1, p2;
    while (!isEmpty(q))
    {
-
       if (!isOperation(peek_char(q)))
-      {
          push(st, 'x', remove_num(q));
-      }
       else
       {
          p1 = (double)(pop_num(st));
@@ -212,7 +185,8 @@ double balanAlth(char *expression)
 {
    Stack st;
    Queue q;
-   for (int i = 0; i < getLength(expression); i++)
+   int len = getLength(expression);
+   for (int i = 0; i < len; i++)
    {
       char c = expression[i];
       if (isDigit(c) == true)
@@ -292,79 +266,77 @@ void enterExpression(int *pipe1, int *pipe2)
    read(pipe2[0], readRs, sizeof(readRs));
    cout << " doc tu cha ne : " << c << endl;
 }
+
 void getExpressionsFromFile()
 {
 }
-char *doubleToString(double x, char *y)
+char *doubleToString(double x)
 {
+   char *y = new char[100];
    bool isNegative = x > 0 ? false : true;
    x = isNegative ? -x : x;
-   int in = x;
-   double decimal = x - in;
-
+   int in = x;              //phan nguyen
+   double decimal = x - in; //phan thap phan
+   int size = 0;
+   char yTemp[100];
    if (decimal != 0)
    {
-      int positionOfDot = 0;
+      size++;                //dem dau cham
+      int positionOfDot = 0; //vi tri cua dau cham
       int tempIn = in;
-      do
+      do //xac dinh vi tri dau cham
       {
          tempIn /= 10;
          positionOfDot++;
       } while ((tempIn) > 0);
-      y[positionOfDot] = '.';
+      yTemp[positionOfDot] = '.';
       int tempDot = positionOfDot;
-      while ((tempDot) >= 0)
+      while ((tempDot) > 0)
       {
-         y[--tempDot] = (in % 10) + '0';
+         yTemp[--tempDot] = (in % 10) + '0';
          in /= 10;
+         size++;
       }
-      int numOfDecimal = 0;
-      while ((decimal - (int)decimal != 0) && numOfDecimal < 2)
+      int numOfDecimal = 0;                                     //so so thap phan
+      while ((decimal - (int)decimal != 0) && numOfDecimal < 2) //dem so thap phan lam tron ve 2 so
       {
          decimal *= 10;
-         y[++positionOfDot] = ((int)decimal % 10) + '0';
+         yTemp[++positionOfDot] = ((int)decimal % 10) + '0';
          numOfDecimal++;
+         size++;
+      }
+      for (int i = 0; i < size; i++)
+      {
+         y[i] = yTemp[i];
       }
    }
    else
    {
-      int count = 0;
       int j = 0;
       char temp;
       while (in > 0)
       {
-         y[j++] = (in % 10) + '0';
+         yTemp[j++] = (in % 10) + '0';
          in /= 10;
-         // count++;
+         size++;
       }
-      while (j >= count)
+      int sizeTemp = size;
+      for (int i = 0; sizeTemp > 0; i++)
       {
-         temp = y[j - 1];
-         y[j - 1] = y[count];
-         j--;
-         y[count++] = temp;
+         y[i] = yTemp[sizeTemp - 1];
+         sizeTemp--;
       }
    }
 
-   // 2.5
    if (isNegative)
    {
-      cout << "y : " << y << "len : " << getLength(y) << endl;
-      int size = 0;
-      int i = 0;
-      while (y[size] && y[size] != '\0' && y[size] != EOF)
+      while (size > 0)
       {
-         cout << y[i] << endl;
-         size++;
-      }
-      // getLength(y);
-      int t = 0;
-      while (size - t > 0)
-      {
-         y[size - t] = y[size - t - 1];
-         t++;
+         y[size] = y[size - 1];
+         size--;
       }
       y[0] = '-';
    }
+
    return y;
 }
