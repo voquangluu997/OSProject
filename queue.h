@@ -5,7 +5,7 @@ struct Queue
 {
     int capacity = 100;
     char string_value[100];
-    int integer_value[100];
+    double num_value[100];
     int front = 0;
     int rear = -1;
 };
@@ -25,7 +25,7 @@ bool isFull(Queue &st)
     return (size(st) == st.capacity) ? true : false;
 }
 
-void offer(Queue &st, char c, int i)
+void offer(Queue &st, char c, double i)
 {
     if (isFull(st))
     {
@@ -34,7 +34,7 @@ void offer(Queue &st, char c, int i)
     }
     st.rear++;
     st.string_value[st.rear] = c;
-    st.integer_value[st.rear] = i;
+    st.num_value[st.rear] = i;
 }
 
 char remove_char(Queue &st)
@@ -50,16 +50,16 @@ char remove_char(Queue &st)
     st.front++;
     return p;
 }
-int  remove_int(Queue &st)
+double remove_num(Queue &st)
 {
-    int p;
+    double p;
     if (isEmpty(st))
     {
         cout << "\n Queue is empty!" << endl;
         return -9999;
         // err
     }
-    p = st.integer_value[st.front];
+    p = st.num_value[st.front];
     st.front++;
     return p;
 }
@@ -74,12 +74,12 @@ char peek_char(Queue &st)
     return st.string_value[st.front];
 }
 
-int peek_int(Queue &st)
+double peek_num(Queue &st)
 {
     if (isEmpty(st))
     {
         printf("Stack is empty");
         return 'e';
     }
-    return st.integer_value[st.front];
+    return st.num_value[st.front];
 }

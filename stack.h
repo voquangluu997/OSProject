@@ -5,7 +5,7 @@ struct Stack
 {
     int capacity = 100;
     char string_value[100];
-    int integer_value[100];
+    double num_value[100];
     int top = -1;
 };
 
@@ -24,7 +24,7 @@ bool isFull(Stack &st)
     return st.top >= (st.capacity - 1) ? true : false;
 }
 
-void push(Stack &st, char c,int i )
+void push(Stack &st, char c,double i )
 {
     if (isFull(st))
     {
@@ -33,7 +33,7 @@ void push(Stack &st, char c,int i )
     }
     st.top++;
     st.string_value[st.top] = c;
-    st.integer_value[st.top] = i ;
+    st.num_value[st.top] = i ;
 }
 
 char pop_char(Stack &st)
@@ -50,16 +50,16 @@ char pop_char(Stack &st)
     return p;
 }
 
-int pop_int(Stack &st)
+double pop_num(Stack &st)
 {
-    int p;
+    double p;
     if (isEmpty(st))
     {
         cout << "\n Stack is empty!" << endl;
         return -9999;
         // err
     }
-    p = st.integer_value[st.top];
+    p = st.num_value[st.top];
     st.top--;
     return p;
 }
@@ -75,12 +75,12 @@ char peek_char(Stack &st)
 }
 
 
-char peek_int(Stack &st)
+double peek_int(Stack &st)
 {
     if (isEmpty(st))
     {
         printf("Stack is empty");
         return 'e';
     }
-    return st.integer_value[st.top];
+    return st.num_value[st.top];
 }

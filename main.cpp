@@ -5,72 +5,94 @@
 #include "stack.h"
 #include "queue.h"
 
+using namespace std;
+
 void menu();
 double balanAlth(char *expression);
 int getLength(char *);
+void enterExpression(int *pipe1, int *pipe2);
+void getExpressionsFromFile();
+char *doubleToString(double x, char *y);
+bool isOperation(char c);
 
 int main()
 {
-
+   char xx[100];
+   doubleToString(-23, xx);
+   cout << "amen " << xx;
    Stack st;
    Queue q;
-   char expression[50] = "11+(20.5*5)/2";
-   cout << "kq la : " << balanAlth(expression) << endl;
+   int pipefds1[2], pipefds2[2];
+   int returnstatus1, returnstatus2;
+   int pid;
+   char pipe1writeExpression[100];
+   char pipe2readExpression[100];
+   char pipe1readResult[100];
+   char pipe2writeResult[100];
+   char readMessage[100];
 
-   // int pipefds1[2], pipefds2[2];
-   // int returnstatus1, returnstatus2;
-   // int pid;
-   // char pipe1writeCalculation[50] = "Hiii";
-   // char pipe2writeResult[50] = "Hellooo";
-   // char readmessage[50];
-   // returnstatus1 = pipe(pipefds1);
+   returnstatus1 = pipe(pipefds1);
+   if (returnstatus1 == -1)
+   {
+      printf("Unable to create pipe 1 \n");
+      return 1;
+   }
 
-   // // readFromFile()
+   returnstatus2 = pipe(pipefds2);
 
-   // if (returnstatus1 == -1)
-   // {
-   //    printf("Unable to create pipe 1 \n");
-   //    return 1;
-   // }
-   // returnstatus2 = pipe(pipefds2);
+   if (returnstatus2 == -1)
+   {
+      printf("Unable to create pipe 2 \n");
+      return 1;
+   }
 
-   // if (returnstatus2 == -1)
-   // {
-   //    printf("Unable to create pipe 2 \n");
-   //    return 1;
-   // }
-
-   // menu();
-   // int option;
-   // scanf("%d", &option);
+   menu();
+   int option;
+   cin >> option;
    // fflush(stdin);
+   cin.ignore();
 
-   // pid = fork();
-   // if (pid != 0) // Parent process
-   // {
-   //    close(pipefds1[0]);
-   //    close(pipefds2[1]);
-   //    // printf("In Parent: Writing to pipe 1 – Message is %s\n", pipe1writeCalculation);
-   //    // write(pipefds1[1], pipe1writeCalculation, sizeof(pipe1writeCalculation));
-   //    printf("In Parent: Writing to pipe 1 – Message is %d\n", option);
-   //    char opt = option == 1 ? '1' : '2';
-   //    write(pipefds1[1], &opt, 1);
-   //    read(pipefds2[0], readmessage, sizeof(readmessage));
-   //    printf("In Parent: Reading from pipe 2 – Message is %s\n", readmessage);
-   // }
-   // else
-   // {                      //child process
-   //    close(pipefds1[1]); // Close the unwanted pipe1 write side
-   //    close(pipefds2[0]); // Close the unwanted pipe2 read side
-   //    read(pipefds1[0], readmessage, sizeof(readmessage));
+   pid = fork();
+   if (pid != 0) // Parent process
+   {
+      close(pipefds1[0]);
+      close(pipefds2[1]);
 
-   //    printf("In Child: Reading from pipe 1 – Message is opt %s\n", readmessage);
-   //    char hihi[40] = "oke ban oi ";
-   //    // printf("In Child: Writing to pipe 2 – Message is %s\n", pipe2writeResult);
-   //    // write(pipefds2[1], pipe2writeResult, sizeof(pipe2writeResult));
-   //    printf("In Child: Writing to pipe 2 – Message is 1%s\n", hihi);
-   //    write(pipefds2[1], hihi, sizeof(hihi));
-   // }
+      switch (option)
+      {
+      case 1:
+         // char c[100];
+         // enterExpression(pipefds1, pipefds2);
+         // char c[100];
+         int returnStatus;
+         cout << "In parent : nhap bieu thuc : ";
+         cin >> pipe1writeExpression;
+         cout << "In Parent: Writing to pipe 1 - ms is " << pipe1writeExpression << endl;
+         write(pipefds1[1], pipe1writeExpression, sizeof(pipe1writeExpression));
+         read(pipefds2[0], readMessage, sizeof(readMessage));
+         cout << "In Parent: Reading from pipe 2 – Message is " << readMessage << endl;
+         break;
+      case 2:
+         getExpressionsFromFile();
+         break;
+      }
+   }
+   else
+   {
+      close(pipefds1[1]); // Close pipe1 write side
+      close(pipefds2[0]); // Close pipe2 read side
+      char c[100];
+      // int returnStatus;
+      // int i = 0;
+      read(pipefds1[0], readMessage, sizeof(readMessage));
+      cout << "In Child: Reading from pipe 1 : bieu thuc doc duoc tu Parent process  la : " << readMessage << endl;
+      double rs = balanAlth(readMessage);
+      cout << " kq theo balan la : " << rs << endl;
+      doubleToString(rs, c);
+      cout << "kq convert thanh chuoi la : " << c << endl;
+      cout << "In Child: Writing to pipe 2 – Message is " << c << endl;
+      write(pipefds2[1], c, sizeof(c));
+   }
    return 0;
 }
 
@@ -80,11 +102,12 @@ void menu()
    printf("1. Nhap bieu thuc\n");
    printf("2. Doc tu file input\n");
 }
+
 int getPriority(char c)
 {
    if (c == '(')
       return 0;
-   else if (c == '+' || c == '-' || c == '/' || c == '*')
+   else if (c == '+' || c == '-')
       return 1;
    return 2;
 }
@@ -96,17 +119,47 @@ bool isDigit(char c)
    return false;
 }
 
-int getNumber(char *str, int &i)
+double getNumber(char *str, int &i)
 {
-   int num = 0;
+   int in = 0;
+   int decimal = 0;
+   bool isDecimal = false;
+   int lenOfDecimal = 0;
+   double result;
    char c = str[i];
-   while (c >= '0' && c <= '9')
+   while ((c >= '0' && c <= '9') || c == '.')
    {
-      num = num * 10 + (c - '0');
+      if (c != '.' && !isDecimal)
+      {
+         in = in * 10 + (c - '0');
+      }
+      if (c == '.')
+      {
+
+         isDecimal = true;
+      }
+      if (c != '.' && isDecimal)
+      {
+         decimal = decimal * 10 + (c - '0');
+         lenOfDecimal++;
+      }
       i++;
       c = str[i];
    };
-   return num;
+   int temp = lenOfDecimal;
+   while (temp > 0)
+   {
+      in = in * 10 + decimal;
+      temp--;
+      result = in;
+   }
+   while (lenOfDecimal > 0)
+   {
+      result = result / 10;
+      lenOfDecimal--;
+   }
+   result = isDecimal ? result : in;
+   return result;
 }
 
 bool isOperation(char c)
@@ -116,7 +169,7 @@ bool isOperation(char c)
    return false;
 }
 
-float calFromOperation(float nd1, float nd2, char op)
+double calFromOperation(double nd1, double nd2, char op)
 {
    switch (op)
    {
@@ -136,20 +189,20 @@ float calFromOperation(float nd1, float nd2, char op)
 
 double calculator(Stack st, Queue q)
 {
-   float p1, p2;
+   double p1, p2;
    while (!isEmpty(q))
    {
 
       if (!isOperation(peek_char(q)))
       {
-         push(st, 'x', remove_int(q));
+         push(st, 'x', remove_num(q));
       }
       else
       {
-         p1 = (float)(pop_int(st));
-         p2 = (float)(pop_int(st));
-         float tempCal = calFromOperation(p2, p1, remove_char(q));
-         push(st, 'x', (int)tempCal);
+         p1 = (double)(pop_num(st));
+         p2 = (double)(pop_num(st));
+         double tempCal = calFromOperation(p2, p1, remove_char(q));
+         push(st, 'x', tempCal);
       }
    }
    return (double)(peek_int(st));
@@ -164,9 +217,8 @@ double balanAlth(char *expression)
       char c = expression[i];
       if (isDigit(c) == true)
       {
-         int num = getNumber(expression, i);
+         double num = getNumber(expression, i);
          i--;
-         // i += num.length() - 1;
          offer(q, 'x', num);
       }
 
@@ -223,9 +275,96 @@ double balanAlth(char *expression)
 int getLength(char *str)
 {
    int i = 0;
-   while (str[i])
+   while (str[i] && str[i] != '\0')
    {
       i++;
    }
    return i;
+}
+
+void enterExpression(int *pipe1, int *pipe2)
+{
+   char c[100], readRs[100];
+   int returnStatus;
+   cout << "In parent : nhap bieu thuc : ";
+   cin >> c;
+   write(pipe1[1], c, sizeof(c));
+   read(pipe2[0], readRs, sizeof(readRs));
+   cout << " doc tu cha ne : " << c << endl;
+}
+void getExpressionsFromFile()
+{
+}
+char *doubleToString(double x, char *y)
+{
+   bool isNegative = x > 0 ? false : true;
+   x = isNegative ? -x : x;
+   int in = x;
+   double decimal = x - in;
+
+   if (decimal != 0)
+   {
+      int positionOfDot = 0;
+      int tempIn = in;
+      do
+      {
+         tempIn /= 10;
+         positionOfDot++;
+      } while ((tempIn) > 0);
+      y[positionOfDot] = '.';
+      int tempDot = positionOfDot;
+      while ((tempDot) >= 0)
+      {
+         y[--tempDot] = (in % 10) + '0';
+         in /= 10;
+      }
+      int numOfDecimal = 0;
+      while ((decimal - (int)decimal != 0) && numOfDecimal < 2)
+      {
+         decimal *= 10;
+         y[++positionOfDot] = ((int)decimal % 10) + '0';
+         numOfDecimal++;
+      }
+   }
+   else
+   {
+      int count = 0;
+      int j = 0;
+      char temp;
+      while (in > 0)
+      {
+         y[j++] = (in % 10) + '0';
+         in /= 10;
+         // count++;
+      }
+      while (j >= count)
+      {
+         temp = y[j - 1];
+         y[j - 1] = y[count];
+         j--;
+         y[count++] = temp;
+      }
+   }
+
+   // 2.5
+   if (isNegative)
+   {
+      cout << "y : " << y << "len : " << getLength(y) << endl;
+      int size = 0;
+      int i = 0;
+      while (y[size] && y[size] != '\0' && y[size] != EOF)
+      {
+         cout << y[i] << endl;
+         size++;
+      }
+      // getLength(y);
+      int t = 0;
+      while (size - t > 0)
+      {
+         y[size - t] = y[size - t - 1];
+         t++;
+      }
+      y[0] = '-';
+   }
+   return y;
 }

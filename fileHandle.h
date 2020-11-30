@@ -1,21 +1,28 @@
-#include <iostream>
-#include <string>
 #include <fstream>
 
-using namespace std;
-
-void readFromFile(char* data)
+void readfromFile(char* str)
 {
-	fstream f;
-	f.open("input.txt", ios::in);
-	// string line;
-	while (!f.eof())          
-	{
-		getline(f, data); 
-		// data += line;
-	}
+	int i=0; char t;
+	FILE *f;
+    f=fopen("input.txt","r");
+    while((t = fgetc(f))!=EOF&& t=fgetc(f)!="\n")
+    {
+        str[i]=t;
+        i++;
+    }
+    str[i]='\0';
+    fclose(f);
+}
+int numberOfCharacter()
+{
+	int i=0; char t;
+	FILE *f;
+    f=fopen("input.txt","r");
+    while((t = fgetc(f))!=EOF)
+    {
+        i++;
+    }
 
-	f.close();
-
-	// cout << data;
+    fclose(f);
+    return i;
 }
