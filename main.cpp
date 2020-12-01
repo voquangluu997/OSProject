@@ -12,8 +12,8 @@ int getLength(char *);
 void enterExpression(int *pipe1, int *pipe2);
 void getExpressionsFromFile();
 char *doubleToString(double x);
-bool isOperation(char c);
-
+void parentProcess(int *pipe1fds1, int *pipefds2, int option);
+void childProcess(int *pipefds1, int *pipefds2);
 int main()
 {
    Stack st;
@@ -21,11 +21,6 @@ int main()
    int pipefds1[2], pipefds2[2];
    int returnstatus1, returnstatus2;
    int pid;
-   char pipe1writeExpression[100];
-   char pipe2readExpression[100];
-   char pipe1readResult[100];
-   char pipe2writeResult[100];
-   char readMessage[100];
 
    returnstatus1 = pipe(pipefds1);
    if (returnstatus1 == -1)
@@ -51,39 +46,11 @@ int main()
    pid = fork();
    if (pid != 0) // Parent process
    {
-      close(pipefds1[0]);
-      close(pipefds2[1]);
-
-      switch (option)
-      {
-      case 1:
-         int returnStatus;
-         cout << "In parent : nhap bieu thuc : ";
-         cin >> pipe1writeExpression;
-         cin.ignore();
-         cout << "In Parent: Writing to pipe 1 - ms is " << pipe1writeExpression << endl;
-         write(pipefds1[1], pipe1writeExpression, sizeof(pipe1writeExpression));
-         read(pipefds2[0], readMessage, sizeof(readMessage));
-         cout << "In Parent: Reading from pipe 2 – Message is " << readMessage << endl;
-         break;
-      case 2:
-         getExpressionsFromFile();
-         break;
-      }
+      parentProcess(pipefds1, pipefds2, option);
    }
    else
    {
-      close(pipefds1[1]); // Close pipe1 write side
-      close(pipefds2[0]); // Close pipe2 read side
-      char *c = new char[100];
-      read(pipefds1[0], readMessage, sizeof(readMessage));
-      cout << "In Child: Reading from pipe 1 : bieu thuc doc duoc tu Parent process  la : " << readMessage << endl;
-      double rs = balanAlth(readMessage);
-      cout << " kq theo balan la : " << rs << endl;
-      c = doubleToString(rs);
-      cout << "kq convert thanh chuoi la : " << c << endl;
-      cout << "In Child: Writing to pipe 2 – Message is " << c << endl;
-      write(pipefds2[1], c, sizeof(c));
+      childProcess(pipefds1, pipefds2);
    }
    return 0;
 }
@@ -94,6 +61,7 @@ void menu()
    printf("2. Doc tu file input\n");
 }
 
+//lay thu tu uu tien cac phan tu
 int getPriority(char c)
 {
    if (c == '(')
@@ -103,13 +71,14 @@ int getPriority(char c)
    return 2;
 }
 
+//kiem tra kt c co phai toan hang hay khong
 bool isDigit(char c)
 {
    if (c >= '0' && c <= '9')
       return true;
    return false;
 }
-
+//lay gia tri cua 1 so bao gom truong hop so do co do dai >= 2
 double getNumber(char *str, int &i)
 {
    int in = 0;
@@ -137,14 +106,14 @@ double getNumber(char *str, int &i)
       decimal /= 10;
    return (double)(in + decimal);
 }
-
+//kiem tra kt co phai toan tu hay khong
 bool isOperation(char c)
 {
    if (c == '-' || c == '+' || c == '/' || c == '*')
       return true;
    return false;
 }
-
+//thuc hien tinh toan nd1 *toan tu* nd2
 double calFromOperation(double nd1, double nd2, char op)
 {
    switch (op)
@@ -162,7 +131,7 @@ double calFromOperation(double nd1, double nd2, char op)
    }
    return 0;
 }
-
+//tinh ket qua sau khi da chuyen xong bieu thuc qua dang hau to
 double calculator(Stack st, Queue q)
 {
    double p1, p2;
@@ -180,7 +149,7 @@ double calculator(Stack st, Queue q)
    }
    return (double)(peek_int(st));
 }
-
+//thuat toan ba lan
 double balanAlth(char *expression)
 {
    Stack st;
@@ -245,7 +214,7 @@ double balanAlth(char *expression)
    }
    return calculator(st, q);
 }
-
+//lay do dai cua 1 xau ki tu
 int getLength(char *str)
 {
    int i = 0;
@@ -255,21 +224,54 @@ int getLength(char *str)
    }
    return i;
 }
-
+// nguoi dung chon nhap bieu thuc tu ban phim
 void enterExpression(int *pipe1, int *pipe2)
 {
-   char c[100], readRs[100];
+   char *pipe1writeExpression = new char[100]; // lay bieu thuc nguoi dung nhap vao de gui cho tien trinh con
+   char *readMessage = new char[100];          //nhan lai ket qua da tinh toan tu tien trinh con
    int returnStatus;
-   cout << "In parent : nhap bieu thuc : ";
-   cin >> c;
-   write(pipe1[1], c, sizeof(c));
-   read(pipe2[0], readRs, sizeof(readRs));
-   cout << " doc tu cha ne : " << c << endl;
+   cout << "In parent : Enter expression: ";
+   cin >> pipe1writeExpression;
+   cin.ignore();
+   cout << "In Parent: Writing to pipe 1 - ms is " << pipe1writeExpression << endl;
+   write(pipe1[1], pipe1writeExpression, sizeof(pipe1writeExpression));
+   read(pipe2[0], readMessage, sizeof(readMessage));
+   cout << "In Parent: Reading from pipe 2 – Result is " << readMessage << endl;
 }
-
+// thuc hien tien trinh cha
+void parentProcess(int *pipefds1, int *pipefds2, int option)
+{
+   close(pipefds1[0]);
+   close(pipefds2[1]);
+   switch (option)
+   {
+   case 1:
+      enterExpression(pipefds1, pipefds2);
+      break;
+   case 2:
+      getExpressionsFromFile();
+      break;
+   }
+}
+// thuc hien tien trinh con
+void childProcess(int *pipefds1, int *pipefds2)
+{
+   close(pipefds1[1]);                     // Close pipe1 write side
+   close(pipefds2[0]);                     // Close pipe2 read side
+   char *readMessage = new char[100];      //doc bieu thuc tu tien trinh cha
+   char *pipe2writeResult = new char[100]; //ghi lai ket qua sau khi tinh toan de gui lai tien trinh cha
+   read(pipefds1[0], readMessage, sizeof(readMessage));
+   cout << "In Child: Reading from pipe 1 : expression readed from Parent process  is : " << readMessage << endl;
+   double rs = balanAlth(readMessage);
+   pipe2writeResult = doubleToString(rs);
+   cout << "In Child: Writing to pipe 2 – Message is " << pipe2writeResult << endl;
+   write(pipefds2[1], pipe2writeResult, sizeof(pipe2writeResult));
+}
+// truong hop lay bieu thuc doc tu file
 void getExpressionsFromFile()
 {
 }
+//chuyen ket qua tinh toan duoc tu kieu double sang xau ki tu
 char *doubleToString(double x)
 {
    char *y = new char[100];
@@ -327,7 +329,6 @@ char *doubleToString(double x)
          sizeTemp--;
       }
    }
-
    if (isNegative)
    {
       while (size > 0)
@@ -337,6 +338,5 @@ char *doubleToString(double x)
       }
       y[0] = '-';
    }
-
    return y;
 }
