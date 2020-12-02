@@ -1,6 +1,5 @@
 #include <iostream>
 using namespace std;
-
 struct Queue
 {
     int capacity = 100;

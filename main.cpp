@@ -3,6 +3,7 @@
 #include <iostream>
 #include "stack.h"
 #include "queue.h"
+#include "fileHandle.h"
 
 using namespace std;
 
@@ -10,10 +11,10 @@ void menu();
 double balanAlth(char *expression);
 int getLength(char *);
 void enterExpression(int *pipe1, int *pipe2);
-void getExpressionsFromFile();
 char *doubleToString(double x);
 void parentProcess(int *pipe1fds1, int *pipefds2, int option);
-void childProcess(int *pipefds1, int *pipefds2);
+void childProcess(int *pipefds1, int *pipefds2, int option);
+void calculationFromFile(int *pipe1fds1, int *pipefds2);
 int main()
 {
    Stack st;
@@ -28,37 +29,42 @@ int main()
       printf("Unable to create pipe 1 \n");
       return 1;
    }
-
    returnstatus2 = pipe(pipefds2);
-
    if (returnstatus2 == -1)
    {
       printf("Unable to create pipe 2 \n");
       return 1;
    }
-
-   menu();
    int option;
+
+   cout << "------------------------------------------------------------" << endl;
+   menu();
    cin >> option;
-   // fflush(stdin);
    cin.ignore();
 
-   pid = fork();
-   if (pid != 0) // Parent process
+   if (option == 0)
    {
-      parentProcess(pipefds1, pipefds2, option);
+      cout << " The Program has stopped --Have a good day--" << endl;
+      cout << "------------------------------------------------------------" << endl;
+   }
+   else if (option != 1 && option != 2)
+   {
+      cout << " your option do not existed - please check again !! " << endl;
    }
    else
-   {
-      childProcess(pipefds1, pipefds2);
-   }
+      pid = fork();
+   if (pid != 0) // Parent process
+      parentProcess(pipefds1, pipefds2, option);
+   else
+      childProcess(pipefds1, pipefds2, option);
    return 0;
 }
 void menu()
 {
-   printf("NHAP LUA CHON: \n");
-   printf("1. Nhap bieu thuc\n");
-   printf("2. Doc tu file input\n");
+   cout << "NHAP LUA CHON:" << endl;
+   cout << "1. Nhap bieu thuc " << endl;
+   cout << "2. Doc tu file input" << endl;
+   cout << "0. Thoat" << endl;
 }
 
 //lay thu tu uu tien cac phan tu
@@ -78,6 +84,7 @@ bool isDigit(char c)
       return true;
    return false;
 }
+
 //lay gia tri cua 1 so bao gom truong hop so do co do dai >= 2
 double getNumber(char *str, int &i)
 {
@@ -106,6 +113,7 @@ double getNumber(char *str, int &i)
       decimal /= 10;
    return (double)(in + decimal);
 }
+
 //kiem tra kt co phai toan tu hay khong
 bool isOperation(char c)
 {
@@ -113,6 +121,7 @@ bool isOperation(char c)
       return true;
    return false;
 }
+
 //thuc hien tinh toan nd1 *toan tu* nd2
 double calFromOperation(double nd1, double nd2, char op)
 {
@@ -131,6 +140,7 @@ double calFromOperation(double nd1, double nd2, char op)
    }
    return 0;
 }
+
 //tinh ket qua sau khi da chuyen xong bieu thuc qua dang hau to
 double calculator(Stack st, Queue q)
 {
@@ -149,6 +159,7 @@ double calculator(Stack st, Queue q)
    }
    return (double)(peek_int(st));
 }
+
 //thuat toan ba lan
 double balanAlth(char *expression)
 {
@@ -214,6 +225,7 @@ double balanAlth(char *expression)
    }
    return calculator(st, q);
 }
+
 //lay do dai cua 1 xau ki tu
 int getLength(char *str)
 {
@@ -224,6 +236,7 @@ int getLength(char *str)
    }
    return i;
 }
+
 // nguoi dung chon nhap bieu thuc tu ban phim
 void enterExpression(int *pipe1, int *pipe2)
 {
@@ -238,6 +251,7 @@ void enterExpression(int *pipe1, int *pipe2)
    read(pipe2[0], readMessage, sizeof(readMessage));
    cout << "In Parent: Reading from pipe 2 – Result is " << readMessage << endl;
 }
+
 // thuc hien tien trinh cha
 void parentProcess(int *pipefds1, int *pipefds2, int option)
 {
@@ -249,27 +263,62 @@ void parentProcess(int *pipefds1, int *pipefds2, int option)
       enterExpression(pipefds1, pipefds2);
       break;
    case 2:
-      getExpressionsFromFile();
+      calculationFromFile(pipefds1, pipefds2);
       break;
    }
 }
 // thuc hien tien trinh con
-void childProcess(int *pipefds1, int *pipefds2)
+void childProcess(int *pipefds1, int *pipefds2, int option)
 {
-   close(pipefds1[1]);                     // Close pipe1 write side
-   close(pipefds2[0]);                     // Close pipe2 read side
-   char *readMessage = new char[100];      //doc bieu thuc tu tien trinh cha
-   char *pipe2writeResult = new char[100]; //ghi lai ket qua sau khi tinh toan de gui lai tien trinh cha
-   read(pipefds1[0], readMessage, sizeof(readMessage));
-   cout << "In Child: Reading from pipe 1 : expression readed from Parent process  is : " << readMessage << endl;
-   double rs = balanAlth(readMessage);
-   pipe2writeResult = doubleToString(rs);
-   cout << "In Child: Writing to pipe 2 – Message is " << pipe2writeResult << endl;
-   write(pipefds2[1], pipe2writeResult, sizeof(pipe2writeResult));
+   close(pipefds1[1]); // Close pipe1 write side
+   close(pipefds2[0]);
+   if (option == 1)
+   {
+      char *readMessage = new char[100];      //doc bieu thuc tu tien trinh cha
+      char *pipe2writeResult = new char[100]; //ghi lai ket qua sau khi tinh toan de gui lai tien trinh cha
+      read(pipefds1[0], readMessage, sizeof(readMessage));
+      cout << "In Child: Reading from pipe 1 : expression read from Parent process  is : " << readMessage << endl;
+      double rs = balanAlth(readMessage);
+      pipe2writeResult = doubleToString(rs);
+      cout << "In Child: Writing to pipe 2 – Message is " << pipe2writeResult << endl;
+      write(pipefds2[1], pipe2writeResult, sizeof(pipe2writeResult));
+   }
+   if (option == 2)
+   {
+      int linesOfFile = getLinesOfFile();
+      char readMessage[100][100];             //doc bieu thuc tu tien trinh cha
+      char *pipe2writeResult = new char[100]; //ghi lai ket qua sau khi tinh toan de gui lai tien trinh cha
+      for (int i = 0; i < linesOfFile; i++)
+      {
+         read(pipefds1[0], readMessage[i], sizeof(readMessage[i]));
+         cout << "In Child: Reading from pipe 1 : expression read from Parent process  is : " << readMessage[i] << endl;
+         double rs = balanAlth(readMessage[i]);
+         pipe2writeResult = doubleToString(rs);
+         cout << "In Child: Writing to pipe 2 – Message is " << pipe2writeResult << endl;
+         write(pipefds2[1], pipe2writeResult, sizeof(pipe2writeResult));
+      }
+   }
 }
-// truong hop lay bieu thuc doc tu file
-void getExpressionsFromFile()
+
+void calculationFromFile(int *pipe1, int *pipe2)
 {
+   char expressions[100][100];
+   char readResultFromChild[100][100];
+   char *readMessage = new char[100];
+   int linesOfFile = getLinesOfFile();
+   getExpressionsFromFile(expressions);
+   for (int i = 0; i < linesOfFile; i++)
+   {
+      cout << "In Parent: Writing to pipe 1 - expression is " << expressions[i] << endl;
+      write(pipe1[1], expressions[i], sizeof(expressions[i]));
+      read(pipe2[0], readMessage, sizeof(readMessage));
+      cout << "In Parent: Reading from pipe 2 – Result is " << readMessage << endl;
+      for (int j = 0; j < getLength(readMessage); j++)
+      {
+         readResultFromChild[i][j] = readMessage[j];
+      }
+   }
+   writeToFile(readResultFromChild);
 }
 //chuyen ket qua tinh toan duoc tu kieu double sang xau ki tu
 char *doubleToString(double x)
