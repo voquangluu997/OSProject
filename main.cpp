@@ -61,10 +61,16 @@ int main()
 }
 void menu()
 {
-   cout << "NHAP LUA CHON:" << endl;
-   cout << "1. Nhap bieu thuc " << endl;
-   cout << "2. Doc tu file input" << endl;
-   cout << "0. Thoat" << endl;
+   cout << "\t ====================================" << endl;
+   cout << "\t|           NHAP LUA CHON:           |" << endl;
+   cout << "\t ====================================" << endl;
+   cout << "\t|         1. Nhap bieu thuc          |" << endl;
+   cout << "\t ====================================" << endl;
+   cout << "\t|         2. Doc tu file input       |" << endl;
+   cout << "\t ====================================" << endl;
+   cout << "\t|         0. Thoat                   |" << endl;
+   cout << "\t ====================================" << endl;
+   cout << "------------------------------------------------------------" << endl;
 }
 
 //lay thu tu uu tien cac phan tu
@@ -144,6 +150,7 @@ double calFromOperation(double nd1, double nd2, char op)
 //tinh ket qua sau khi da chuyen xong bieu thuc qua dang hau to
 double calculator(Stack st, Queue q)
 {
+   bool isErr = false;
    double p1, p2;
    while (!isEmpty(q))
    {
@@ -154,6 +161,11 @@ double calculator(Stack st, Queue q)
          p1 = (double)(pop_num(st));
          p2 = (double)(pop_num(st));
          double tempCal = calFromOperation(p2, p1, remove_char(q));
+         if (tempCal == -9999)
+         {
+            isErr = true;
+            return tempCal;
+         }
          push(st, 'x', tempCal);
       }
    }
@@ -216,6 +228,10 @@ double balanAlth(char *expression)
             }
          }
       }
+      else if (c == ' ' || c == '\n')
+         continue;
+      else
+         return -9999;
    }
 
    while (!isEmpty(st))
@@ -249,7 +265,8 @@ void enterExpression(int *pipe1, int *pipe2)
    cout << "In Parent: Writing to pipe 1 - ms is " << pipe1writeExpression << endl;
    write(pipe1[1], pipe1writeExpression, sizeof(pipe1writeExpression));
    read(pipe2[0], readMessage, sizeof(readMessage));
-   cout << "In Parent: Reading from pipe 2 – Result is " << readMessage << endl;
+   if (!isErr(readMessage))
+      cout << "In Parent: Reading from pipe 2 – Result is " << readMessage << endl;
 }
 
 // thuc hien tien trinh cha
@@ -280,7 +297,11 @@ void childProcess(int *pipefds1, int *pipefds2, int option)
       cout << "In Child: Reading from pipe 1 : expression read from Parent process  is : " << readMessage << endl;
       double rs = balanAlth(readMessage);
       pipe2writeResult = doubleToString(rs);
-      cout << "In Child: Writing to pipe 2 – Message is " << pipe2writeResult << endl;
+      if (rs != -9999)
+         cout << "In Child: Writing to pipe 2 – Message is " << pipe2writeResult << endl;
+      else
+         cout << "In Child: Writing to pipe 2 – Message is "
+              << "Bieu thuc nhap vao khong dung" << endl;
       write(pipefds2[1], pipe2writeResult, sizeof(pipe2writeResult));
    }
    if (option == 2)
@@ -300,6 +321,18 @@ void childProcess(int *pipefds1, int *pipefds2, int option)
    }
 }
 
+// // bat loi chia het cho 0
+// bool isErr(char *data)
+// {
+//     if (data[0] != '-') return false;
+//         for (int i = 1; i < 5; i++)
+//         {
+//             if (data[i] != '9')
+//                 return false;
+//         }
+//     return true;
+// }
+
 void calculationFromFile(int *pipe1, int *pipe2)
 {
    char expressions[100][100];
@@ -312,7 +345,10 @@ void calculationFromFile(int *pipe1, int *pipe2)
       cout << "In Parent: Writing to pipe 1 - expression is " << expressions[i] << endl;
       write(pipe1[1], expressions[i], sizeof(expressions[i]));
       read(pipe2[0], readMessage, sizeof(readMessage));
-      cout << "In Parent: Reading from pipe 2 – Result is " << readMessage << endl;
+      if (isErr(readMessage) == true)
+         cout << "In Parent: Reading from pipe 2 – Result is " << readMessage << endl;
+      // else
+      //    cout << "In Parent: Reading from pipe 2 – Result is " << "Bieu thuc nhap va khong dung"<< endl;
       for (int j = 0; j < getLength(readMessage); j++)
       {
          readResultFromChild[i][j] = readMessage[j];

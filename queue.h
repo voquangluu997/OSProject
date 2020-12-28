@@ -67,7 +67,7 @@ char peek_char(Queue &st)
 {
     if (isEmpty(st))
     {
-        printf("Stack is empty");
+        printf("Stack is empty \n");
         return 'e';
     }
     return st.string_value[st.front];
@@ -77,7 +77,7 @@ double peek_num(Queue &st)
 {
     if (isEmpty(st))
     {
-        printf("Stack is empty");
+        printf("Stack is empty \n");
         return 'e';
     }
     return st.num_value[st.front];
